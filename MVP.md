@@ -109,6 +109,12 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 
 在本地创建目录 `mock_model/`，建议包含以下文件：
 
+> 这里的 `mock_model/`、`score.py`、`model_placeholder.txt` 等，都是先在你电脑本地这个项目目录里创建的文件，不是先去 AML Workspace 里手工新建文件。
+>
+> 当前仓库的实际部署方式是：先在本地准备这些文件，再由本地脚本把它们注册/上传到 Azure Machine Learning。也就是说：
+> - **本地**：准备模型目录、推理脚本、依赖文件
+> - **云上 AML**：保存注册后的 Model / Environment / Endpoint / Deployment
+
 **`mock_model/model_placeholder.txt`**（默认占位文件；没有真实模型文件时走 Mock）
 
 ```
@@ -188,6 +194,22 @@ dependencies:
 ```
 
 如果真实模型需要额外依赖，例如 `torch`、`onnxruntime-gpu`、`opencv-python-headless`，再按模型框架补充进去。
+
+#### 步骤二补充说明：这些文件最终如何进 AML？
+
+当前这套 MVP 不是把 `mock_model/` 手工复制到某台 AML 虚机上运行，而是通过 **AML Online Endpoint 部署** 的方式把本地内容提交到云端：
+
+1. 本地 `deploy_to_aml.py` 读取 `./mock_model` 下的文件
+2. 脚本调用 Azure ML SDK，向工作区注册 **Model** 和 **Environment**
+3. 脚本把 `mock_model/score.py` 作为在线推理入口脚本上传为 **Code Configuration**
+4. 脚本创建 **Managed Online Endpoint** 和 **blue Deployment**
+5. AML 在云上拉起推理容器，对外暴露 HTTPS 推理地址
+
+所以你可以把它理解成：
+
+- `mock_model/` 是本地源码和模型资产目录
+- `deploy_to_aml.py` 是“打包并发布到 AML”的脚本
+- 真正对外提供推理服务的是 AML Online Endpoint，不是你本地电脑
 
 #### 步骤三：注册模型并部署端点
 
@@ -270,9 +292,100 @@ print(f"API Key：{keys.primary_key}")
 python deploy_to_aml.py
 ```
 
+> **核验结论**：按当前仓库内容看，AML 部署主路径确实是 **本地脚本 / 命令行方式**，不是纯 Portal 点选完成。
+>
+> 依据：
+> - `deploy_to_aml.py` 会在本地调用 `azure.ai.ml` SDK
+> - 脚本里明确执行了注册 Model、注册 Environment、创建 Endpoint、创建 Deployment、切流量等动作
+> - 也就是说，文档当前默认读者是在本地终端运行部署，而不是在 Portal 里一步一步点出来
+
 记录输出的：
 - **端点 URL**：*[https://[shelf-detection-endpoint].[westus2].inference.ml.azure.com/score]*
 - **API Key**：primary_key 的值
+
+#### 步骤四：如果想尽量通过 Portal / Studio 操作，可以这样做
+
+这里需要区分两个界面：
+
+- **Azure Portal**：适合创建 AML Workspace 资源本身
+- **Azure Machine Learning Studio**：适合做模型注册、环境配置、在线端点部署
+
+也就是说，创建 Workspace 主要在 Portal；部署模型端点，更常见的是从 Portal 进入 AML Studio 后操作。
+
+**4.1 从 Portal 进入 AML Studio**
+
+```text
+Azure Portal → Azure Machine Learning → 进入工作区 [amltestworkspace] → Launch studio
+```
+
+**4.2 在 Studio 注册模型**
+
+```text
+AML Studio → Assets → Models → Register → From local files
+```
+
+建议选择其一：
+
+- 仅跑 Mock：上传 `mock_model/model_placeholder.txt`
+- 准备真实模型：上传 `mock_model/model_artifacts/` 下真实模型目录
+
+模型名称可填写：*[shelf-detection-model]*
+
+**4.3 在 Studio 创建推理环境**
+
+```text
+AML Studio → Assets → Environments → Create
+```
+
+推荐配置：
+
+- Environment name：*[shelf-detection-env]*
+- Base image：`mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04`
+- Conda file：上传或粘贴 `mock_model/conda.yml` 内容
+
+**4.4 在 Studio 创建 Online Endpoint**
+
+```text
+AML Studio → Endpoints → Online endpoints → Create
+```
+
+推荐配置：
+
+- Endpoint type：Managed online endpoint
+- Endpoint name：*[shelf-detection-endpoint]*
+- Authentication：Key
+
+**4.5 在 Endpoint 下创建 Deployment**
+
+```text
+进入 [shelf-detection-endpoint] → Deployments → Create / New deployment
+```
+
+推荐配置：
+
+- Deployment name：*[blue]*
+- Model：选择 *[shelf-detection-model]*
+- Environment：选择 *[shelf-detection-env]*
+- Code path：上传本地 `mock_model/`
+- Scoring script：`score.py`
+- Instance type：`Standard_DS2_v2`
+- Instance count：`1`
+
+如果只跑 Mock，可在 Deployment 的 Environment variables 中加入：
+
+- `MODEL_RUNTIME_MODE=mock`
+
+**4.6 配置流量并获取调用信息**
+
+```text
+进入 Endpoint → Traffic → 将 100% 流量指向 [blue]
+进入 Endpoint → Consume → 复制 REST endpoint 和 Primary key
+```
+
+然后把这两个值配置到 Function App：
+
+- `AML_ENDPOINT_URL`
+- `AML_API_KEY`
 
 > **保留 Mock 的同时接真实模型**：
 > 1. 将真实模型文件放入 `mock_model/model_artifacts/`
