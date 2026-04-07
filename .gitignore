@@ -4,6 +4,7 @@ generate_drawio.py
 *.pptx
 *.pdf
 *.drawio
+FIRST_COMMIT_CHECKLIST.md
 
 # 发布排除：本地测试/临时访问脚本/打包产物
 enable_storage_test_access.cmd
