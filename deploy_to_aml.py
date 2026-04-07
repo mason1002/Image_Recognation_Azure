@@ -2,7 +2,7 @@
 
 Behavior:
 - If real model files exist under mock_model/model_artifacts/, register that folder.
-- Otherwise register model_stub.txt and keep the endpoint in mock mode.
+- Otherwise register model_placeholder.txt and keep the endpoint in mock mode.
 """
 import os
 
@@ -28,7 +28,7 @@ ENDPOINT_NAME   = os.getenv("AZURE_ML_ENDPOINT_NAME", "shelf-detection-endpoint"
 MODEL_NAME      = os.getenv("AZURE_ML_MODEL_NAME", "shelf-detection-model")
 ENV_NAME        = os.getenv("AZURE_ML_ENV_NAME", "shelf-inference-env")
 MODEL_ARTIFACTS_DIR = Path("./mock_model/model_artifacts")
-MODEL_STUB_PATH = Path("./mock_model/model_stub.txt")
+MODEL_PLACEHOLDER_PATH = Path("./mock_model/model_placeholder.txt")
 
 
 def resolve_model_path() -> Path:
@@ -39,7 +39,7 @@ def resolve_model_path() -> Path:
             if path.is_file() and path.suffix.lower() in real_model_extensions:
                 return MODEL_ARTIFACTS_DIR
 
-    return MODEL_STUB_PATH
+    return MODEL_PLACEHOLDER_PATH
 
 ml_client = MLClient(
     DefaultAzureCredential(),

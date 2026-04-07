@@ -109,10 +109,10 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 
 在本地创建目录 `mock_model/`，建议包含以下文件：
 
-**`mock_model/model_stub.txt`**（默认占位文件；没有真实模型文件时走 Mock）
+**`mock_model/model_placeholder.txt`**（默认占位文件；没有真实模型文件时走 Mock）
 
 ```
-shelf-detection-model-v1-stub
+shelf-detection-model-v1-placeholder
 ```
 
 **`mock_model/score.py`**（统一推理入口）
@@ -129,7 +129,7 @@ shelf-detection-model-v1-stub
 **`mock_model/model_artifacts/`**（可选）
 
 - 放置真实模型文件，例如 `model.onnx`、`model.pt`
-- `deploy_to_aml.py` 会优先注册这个目录；若目录里没有真实模型文件，则自动回退到 `model_stub.txt`
+- `deploy_to_aml.py` 会优先注册这个目录；若目录里没有真实模型文件，则自动回退到 `model_placeholder.txt`
 
 `score.py` 示例：
 
@@ -211,10 +211,10 @@ ml_client = MLClient(
 
 # 1. 注册模型
 #    - mock_model/model_artifacts/ 下有真实模型文件时，注册整个目录
-#    - 否则回退到 model_stub.txt
+#    - 否则回退到 model_placeholder.txt
 model = ml_client.models.create_or_update(
     Model(
-        path="<自动选择 model_artifacts/ 或 model_stub.txt>",
+        path="<自动选择 model_artifacts/ 或 model_placeholder.txt>",
         name="[shelf-detection-model]",
         version="1",
         description="货架检测模型（Mock/Real 双模式）"

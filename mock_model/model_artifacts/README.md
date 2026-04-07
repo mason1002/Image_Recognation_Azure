@@ -4,7 +4,7 @@ Supported by the current deployment script:
 
 - If this folder contains a real model file such as .onnx, .pt, .pth, .pb, .joblib, or .pkl,
   deploy_to_aml.py will register the whole folder as the AML model asset.
-- If no such file exists, the deployment falls back to mock_model/model_stub.txt.
+- If no such file exists, the deployment falls back to mock_model/model_placeholder.txt.
 
 Typical next step:
 
