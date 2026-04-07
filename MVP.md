@@ -493,15 +493,19 @@ def analyze_shelf_image(blob: func.InputStream):
         "imageName": blob_name,
         "analyzedAt": datetime.now(timezone.utc).isoformat(),
         "model": "[shelf-detection-model]:1",
-        "description": analysis.get("description", ""),
-        "complianceScore": analysis.get("compliance_score", 0),
-        "issues": analysis.get("issues", []),
-        "outOfStockPositions": analysis.get("out_of_stock_positions", []),
-        "objects": analysis.get("objects", []),
-        "objectCount": len(analysis.get("objects", []))
+        "result": {
+            "description": analysis.get("description", ""),
+            "compliance_score": analysis.get("compliance_score", 0),
+            "issues": analysis.get("issues", []),
+            "out_of_stock_positions": analysis.get("out_of_stock_positions", []),
+            "objects": analysis.get("objects", [])
+        }
     }
 
-    logging.info(f"[MVP] 合规评分：{result_doc['complianceScore']}，问题数：{len(result_doc['issues'])}")
+    logging.info(
+        f"[MVP] 合规评分：{result_doc['result']['compliance_score']}，"
+        f"问题数：{len(result_doc['result']['issues'])}"
+    )
 
     # ── 4. 写入 Cosmos DB ────────────────────────────────────────
     cosmos_client = CosmosClient(COSMOS_URI, COSMOS_KEY)
@@ -652,13 +656,14 @@ items = list(container.query_items(
 ))
 
 for item in items:
-    print(f"\n📸 图片：{item['imageName']}")
-    print(f"   时间：{item['analyzedAt']}")
-    print(f"   描述：{item.get('description', '')}")
-    print(f"   合规评分：{item.get('complianceScore', 'N/A')}")
-    print(f"   发现问题：{item.get('issues', [])}")
-    print(f"   疑似缺货：{item.get('outOfStockPositions', [])}")
-    for obj in item.get('objects', []):
+    result = item.get('result', {})
+    print(f"\n📸 Blob：{item.get('blobName', item.get('imageName', 'N/A'))}")
+    print(f"   时间：{item.get('timestamp', item.get('analyzedAt', 'N/A'))}")
+    print(f"   描述：{result.get('description', '')}")
+    print(f"   合规评分：{result.get('compliance_score', 'N/A')}")
+    print(f"   发现问题：{result.get('issues', [])}")
+    print(f"   疑似缺货：{result.get('out_of_stock_positions', [])}")
+    for obj in result.get('objects', []):
         print(f"     - {obj['name']} @ {obj['position']} [{obj['status']}]")
 ```
 
@@ -669,16 +674,56 @@ python query_results.py
 输出示例：
 
 ```
-📸 图片：test_shelf.jpg
-   时间：2026-04-06T10:30:00+00:00
-   描述：a shelf with various products
-   检测物体数：5
-     - bottle (置信度: 0.923)
-     - can (置信度: 0.887)
-     - box (置信度: 0.841)
-     - shelf (置信度: 0.956)
-     - product (置信度: 0.812)
+📸 Blob：raw-images/e2e-nestedjson-final-20260407-152338.png
+     时间：2026-04-07T07:23:44.882525Z
+     描述：货架图像分析完成（模拟结果）
+     合规评分：0.76
+     发现问题：['价签遮挡商品']
+     疑似缺货：['第二层第3–4格']
+         - Coca-Cola 330ml @ 第一层左侧 [in_stock]
+         - 百事可乐 330ml @ 第一层右侧 [in_stock]
+         - 农夫山泉 550ml @ 第二层左侧 [in_stock]
 ```
+
+如果直接在 Portal 的 Data Explorer 中查看文档，当前结果结构示例如下：
+
+```json
+{
+    "id": "7de3dd59-7fd9-4f78-acb7-49803e68bb78",
+    "storeId": "store-mvp-001",
+    "blobName": "raw-images/e2e-nestedjson-final-20260407-152338.png",
+    "timestamp": "2026-04-07T07:23:44.882525Z",
+    "result": {
+        "description": "货架图像分析完成（模拟结果）",
+        "compliance_score": 0.76,
+        "issues": [
+            "价签遮挡商品"
+        ],
+        "out_of_stock_positions": [
+            "第二层第3–4格"
+        ],
+        "objects": [
+            {
+                "name": "Coca-Cola 330ml",
+                "position": "第一层左侧",
+                "status": "in_stock"
+            },
+            {
+                "name": "百事可乐 330ml",
+                "position": "第一层右侧",
+                "status": "in_stock"
+            },
+            {
+                "name": "农夫山泉 550ml",
+                "position": "第二层左侧",
+                "status": "in_stock"
+            }
+        ]
+    }
+}
+```
+
+说明：当前线上 Function 已经在写入前把 AML 返回的字符串 JSON 反序列化，所以 `result` 字段现在是嵌套 JSON 对象，不再是字符串。
 
 ### 5.4 测试通过标准
 
@@ -691,8 +736,8 @@ python query_results.py
 | Function 日志 | 至少出现以下关键日志：`[MVP] 检测到新图片`、`[MVP] 合规评分`、`[MVP] 结果已写入 Cosmos DB` |
 | AML 推理 | Function 未在调用 AML 时抛出 HTTP 错误，说明端点可正常返回 JSON |
 | Cosmos DB 入库 | *[DetectionResults]* 容器中新增 1 条与测试图片同名的记录 |
-| 结果字段完整性 | 新记录至少包含 `id`、`storeId`、`imageName`、`analyzedAt`、`description`、`complianceScore` |
-| 数据可读性 | `issues`、`outOfStockPositions`、`objects` 字段可被正常查询和打印，即使为空数组也算通过 |
+| 结果字段完整性 | 新记录至少包含 `id`、`storeId`、`blobName`、`timestamp`、`result.description`、`result.compliance_score` |
+| 数据可读性 | `result.issues`、`result.out_of_stock_positions`、`result.objects` 字段可被正常查询和打印，即使为空数组也算通过 |
 
 建议使用下面的最小验收结论：
 

@@ -11,6 +11,16 @@ from azure.cosmos import CosmosClient
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 # ── helpers ─────────────────────────────────────────────────────────────────
+def _normalize_result(result):
+    """Convert AML string payloads into JSON objects before persisting."""
+    if isinstance(result, str):
+        try:
+            return json.loads(result)
+        except json.JSONDecodeError:
+            return {"raw_result": result}
+    return result
+
+
 def _call_aml(image_bytes: bytes, blob_name: str) -> dict:
     """Call AML Online Endpoint for shelf detection inference."""
     endpoint_url = os.environ["AML_ENDPOINT_URL"]
@@ -40,13 +50,14 @@ def _save_to_cosmos(result: dict, blob_name: str) -> None:
     client = CosmosClient(cosmos_uri, credential=ManagedIdentityCredential())
 
     container = client.get_database_client(database_name).get_container_client(container_name)
+    normalized_result = _normalize_result(result)
 
     doc = {
         "id": str(uuid.uuid4()),
         "storeId": os.environ.get("STORE_ID", "store-mvp-001"),
         "blobName": blob_name,
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "result": result,
+        "result": normalized_result,
     }
     container.upsert_item(doc)
     logging.info("Saved result to Cosmos DB: id=%s", doc["id"])
