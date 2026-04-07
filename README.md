@@ -75,7 +75,7 @@ Azure 云端 AI 推理管道
 
 ![智能视觉检测云端解决方案架构图](./assets/architecture-overview.svg)
 
-如需编辑原始图，请使用 `Image_Recognation_Azure.drawio` 或 `Image_Recognation_Azure_v1.drawio`。
+
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -294,8 +294,6 @@ az eventgrid event-subscription create \
       }
     ],
     "complianceScore": 0.92,
-    "outOfStockCount": 2
-  }
   ```
 
 ### 4.8 Azure API Management
