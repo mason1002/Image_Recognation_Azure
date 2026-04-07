@@ -973,7 +973,10 @@ az network private-endpoint create \
 ```text
 Image_Recognation_Azure/
 ├── README.md                     ← 本文档（GitHub 说明文件）
-└── Image_Recognation_Azure.pptx  ← 方案介绍 PPT
+├── MVP.md                        ← MVP 快速验证指南
+├── deploy_to_aml.py              ← AML Endpoint 部署脚本
+├── shelf_func/                   ← Azure Function 源码
+└── mock_model/                   ← Mock/真实模型适配目录
 ```
 
 ---

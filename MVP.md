@@ -9,7 +9,7 @@
 
 ### 保留（核心链路）
 
-```
+```text
 本地/手动上传图片
         ↓
    Azure Blob Storage [shelfmvpstore001] / [raw-images]
@@ -26,7 +26,7 @@
 ### 移除（降低复杂度）
 
 | 完整方案组件 | MVP 替代方案 | 原因 |
-|------------|------------|------|
+| ------------ | ------------ | ---- |
 | Azure IoT Hub | 手动/脚本上传图片到 Blob | 无需真实设备 |
 | Azure Event Grid | Blob Trigger 直连 | PoC 延迟可接受 |
 | Azure OpenAI | 不使用，直接调 AML 端点 | 验证自有模型接入流程 |
@@ -39,7 +39,7 @@
 > 轻度测试（每天约 100 张图片）。AML Endpoint 按运行时长计费，**测试结束后及时删除 Deployment 可大幅降低成本**。
 
 | 服务 | 规格 | 月估算 |
-|------|------|--------|
+| ---- | ---- | ------ |
 | Blob Storage | 热层 1 GB | < $0.1 |
 | Azure Functions | 消费计划，免费额度内 | $0 |
 | Azure Machine Learning | Standard_DS2_v2 CPU × 1（常开） | ~$100 |
@@ -70,7 +70,7 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 
 在 [portal.azure.com](https://portal.azure.com) 中：
 
-```
+```text
 + 创建资源 → 资源组
     名称：[rg-aml-test]
     区域：[westus2]（或离你最近的区域）
@@ -78,7 +78,7 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 
 ### 3.2 创建 Storage Account
 
-```
+```text
 + 创建资源 → 存储账户
     资源组：[rg-aml-test]
     名称：[shelfmvpstore001]（全局唯一）
@@ -86,6 +86,7 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 ```
 
 创建完成后，进入存储账户 → **容器** → 新建：
+
 - *[raw-images]*（存放待检测图片）
 - *[results]*（可选）
 
@@ -93,7 +94,7 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 
 #### 步骤一：在 Portal 创建 AML Workspace
 
-```
+```text
 + 创建资源 → 搜索"Azure Machine Learning"
     资源组：[rg-aml-test]
     工作区名称：[amltestworkspace]
@@ -101,11 +102,13 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 ```
 
 创建完成后记录：
+
 - **订阅 ID**（概述页面）
 - **资源组名称**：*[rg-aml-test]*
 - **工作区名称**：*[amltestworkspace]*
 
 官方参考链接：
+
 - Workspace 创建入口：<https://learn.microsoft.com/azure/machine-learning/quickstart-create-resources?view=azureml-api-2>
 - Workspace 管理说明：<https://learn.microsoft.com/azure/machine-learning/how-to-manage-workspace?view=azureml-api-2>
 
@@ -116,12 +119,13 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 > 这里的 `mock_model/`、`score.py`、`model_placeholder.txt` 等，都是先在你电脑本地这个项目目录里创建的文件，不是先去 AML Workspace 里手工新建文件。
 >
 > 当前仓库的实际部署方式是：先在本地准备这些文件，再由本地脚本把它们注册/上传到 Azure Machine Learning。也就是说：
+>
 > - **本地**：准备模型目录、推理脚本、依赖文件
 > - **云上 AML**：保存注册后的 Model / Environment / Endpoint / Deployment
 
 **`mock_model/model_placeholder.txt`**（默认占位文件；没有真实模型文件时走 Mock）
 
-```
+```text
 shelf-detection-model-v1-placeholder
 ```
 
@@ -299,15 +303,18 @@ python deploy_to_aml.py
 > **核验结论**：按当前仓库内容看，AML 部署主路径确实是 **本地脚本 / 命令行方式**，不是纯 Portal 点选完成。
 >
 > 依据：
+>
 > - `deploy_to_aml.py` 会在本地调用 `azure.ai.ml` SDK
 > - 脚本里明确执行了注册 Model、注册 Environment、创建 Endpoint、创建 Deployment、切流量等动作
 > - 也就是说，文档当前默认读者是在本地终端运行部署，而不是在 Portal 里一步一步点出来
 
 官方参考链接：
+
 - Online Endpoint 部署说明：<https://learn.microsoft.com/azure/machine-learning/how-to-deploy-online-endpoints?view=azureml-api-2>
 - Deploy a model as an online endpoint：<https://learn.microsoft.com/en-us/azure/machine-learning/tutorial-deploy-model?view=azureml-api-2>
 
 记录输出的：
+
 - **端点 URL**：*[https://[shelf-detection-endpoint].[westus2].inference.ml.azure.com/score]*
 - **API Key**：primary_key 的值
 
@@ -320,13 +327,13 @@ python deploy_to_aml.py
 
 也就是说，创建 Workspace 主要在 Portal；部署模型端点，更常见的是从 Portal 进入 AML Studio 后操作。
 
-**4.1 从 Portal 进入 AML Studio**
+#### 4.1 从 Portal 进入 AML Studio
 
 ```text
 Azure Portal → Azure Machine Learning → 进入工作区 [amltestworkspace] → Launch studio
 ```
 
-**4.2 在 Studio 注册模型**
+#### 4.2 在 Studio 注册模型
 
 ```text
 AML Studio → Assets → Models → Register → From local files
@@ -339,7 +346,7 @@ AML Studio → Assets → Models → Register → From local files
 
 模型名称可填写：*[shelf-detection-model]*
 
-**4.3 在 Studio 创建推理环境**
+#### 4.3 在 Studio 创建推理环境
 
 ```text
 AML Studio → Assets → Environments → Create
@@ -351,7 +358,7 @@ AML Studio → Assets → Environments → Create
 - Base image：`mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04`
 - Conda file：上传或粘贴 `mock_model/conda.yml` 内容
 
-**4.4 在 Studio 创建 Online Endpoint**
+#### 4.4 在 Studio 创建 Online Endpoint
 
 ```text
 AML Studio → Endpoints → Online endpoints → Create
@@ -363,7 +370,7 @@ AML Studio → Endpoints → Online endpoints → Create
 - Endpoint name：*[shelf-detection-endpoint]*
 - Authentication：Key
 
-**4.5 在 Endpoint 下创建 Deployment**
+#### 4.5 在 Endpoint 下创建 Deployment
 
 ```text
 进入 [shelf-detection-endpoint] → Deployments → Create / New deployment
@@ -383,7 +390,7 @@ AML Studio → Endpoints → Online endpoints → Create
 
 - `MODEL_RUNTIME_MODE=mock`
 
-**4.6 配置流量并获取调用信息**
+#### 4.6 配置流量并获取调用信息
 
 ```text
 进入 Endpoint → Traffic → 将 100% 流量指向 [blue]
@@ -396,6 +403,7 @@ AML Studio → Endpoints → Online endpoints → Create
 - `AML_API_KEY`
 
 > **保留 Mock 的同时接真实模型**：
+>
 > 1. 将真实模型文件放入 `mock_model/model_artifacts/`
 > 2. 在 `mock_model/real_model_adapter.py` 中实现 `init_model()` 和 `predict()`
 > 3. 按需在 `conda.yml` 中补充框架依赖
@@ -405,7 +413,7 @@ AML Studio → Endpoints → Online endpoints → Create
 
 ### 3.4 创建 Cosmos DB
 
-```
+```text
 + 创建资源 → Azure Cosmos DB → NoSQL API
     资源组：[rg-aml-test]
     账户名：[shelf-mvp-cosmos]
@@ -413,18 +421,21 @@ AML Studio → Endpoints → Online endpoints → Create
 ```
 
 创建完成后：
+
 1. 进入数据资源管理器 → 新建数据库：*[ShelfVisionDB]*
 2. 新建容器：
+
     - 容器 ID：*[DetectionResults]*
-   - 分区键：`/storeId`
+    - 分区键：`/storeId`
 
 记录：
+
 - **URI**：在「概述」页面获取
 - **主密钥**：在「密钥」页面获取
 
 ### 3.5 创建 Function App
 
-```
+```text
 + 创建资源 → 函数应用
     资源组：[rg-aml-test]
     名称：[shelf-mvp-fn-b1]（全局唯一）
@@ -519,7 +530,7 @@ def analyze_shelf_image(blob: func.InputStream):
 
 **`requirements.txt`**
 
-```
+```text
 azure-functions
 requests
 azure-cosmos
@@ -530,7 +541,7 @@ azure-cosmos
 在 Azure Portal → 你的 Function App → **配置** → 应用程序设置，添加：
 
 | 名称 | 值 |
-|------|-----|
+| ---- | ---- |
 | `AML_ENDPOINT_URL` | `https://[shelf-detection-endpoint].[westus2].inference.ml.azure.com/score` |
 | `AML_API_KEY` | deploy_to_aml.py 输出的 primary_key |
 | `COSMOS_URI` | Cosmos DB 的 URI |
@@ -618,13 +629,13 @@ flowchart TD
 - Blob 容器：*[raw-images]*
 - 示例 Blob 路径：*[raw-images]/test_shelf.jpg*
 
-**方式 A：Azure Portal（最简单）**
+#### 方式 A：Azure Portal（最简单）
 
-```
+```text
 存储账户 [shelfmvpstore001] → 容器 [raw-images] → 上传 → 选择本地图片
 ```
 
-**方式 B：Python 脚本上传**
+#### 方式 B：Python 脚本上传
 
 ```python
 # upload_test.py
@@ -648,7 +659,7 @@ python upload_test.py
 
 ### 5.2 查看 Function 执行日志
 
-```
+```text
 Azure Portal → Function App [shelf-mvp-fn-b1]
   → Functions → analyze_shelf_image
   → 监视 → 调用
@@ -656,7 +667,7 @@ Azure Portal → Function App [shelf-mvp-fn-b1]
 
 日志示例：
 
-```
+```text
 [MVP] 检测到新图片：test_shelf.jpg
 [MVP] 合规评分：0.75，问题数：2
 [MVP] 结果已写入 Cosmos DB：test_shelf_jpg
@@ -664,14 +675,14 @@ Azure Portal → Function App [shelf-mvp-fn-b1]
 
 ### 5.3 查询 Cosmos DB 结果
 
-**方式 A：Azure Portal 数据资源管理器**
+#### 方式 A：Azure Portal 数据资源管理器
 
-```
+```text
 Cosmos DB → 数据资源管理器
     → [ShelfVisionDB] → [DetectionResults] → Items
 ```
 
-**方式 B：Python 查询脚本**
+#### 方式 B：Python 查询脚本
 
 ```python
 # query_results.py
@@ -710,7 +721,7 @@ python query_results.py
 
 输出示例：
 
-```
+```text
 📸 Blob：raw-images/e2e-nestedjson-final-20260407-152338.png
      时间：2026-04-07T07:23:44.882525Z
      描述：货架图像分析完成（模拟结果）
@@ -767,7 +778,7 @@ python query_results.py
 完成一次端到端测试后，满足以下条件即可认为 MVP 主链路验证通过：
 
 | 检查项 | 通过标准 |
-|------|------|
+| ---- | ---- |
 | Blob 上传 | *[raw-images]* 容器中可以看到刚上传的测试图片 |
 | Function 触发 | Function Monitor 中出现对应调用记录，且无未处理异常 |
 | Function 日志 | 至少出现以下关键日志：`[MVP] 检测到新图片`、`[MVP] 合规评分`、`[MVP] 结果已写入 Cosmos DB` |
@@ -793,7 +804,7 @@ python query_results.py
 
 当 MVP 验证完核心链路后，按需逐步升级：
 
-```
+```text
 MVP 现状                        升级方向
 ─────────────────────────────────────────────────────────
 手动上传图片             →  IoT Hub + 边缘设备自动上传
@@ -821,4 +832,4 @@ az group delete --name [rg-aml-test] --yes --no-wait
 
 ---
 
-*MVP 文档 | Microsoft Azure | April 2026*
+MVP 文档 | Microsoft Azure | April 2026
