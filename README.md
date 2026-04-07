@@ -36,7 +36,7 @@
 
 ### 2.1 场景描述
 
-```
+```text
 巡检机器人（Edge Robot）
   │
   ├─ 摄像头自动巡检货架（高分辨率图片）
@@ -60,7 +60,7 @@ Azure 云端 AI 推理管道
 ### 2.2 业务挑战
 
 | 挑战 | 描述 |
-|------|------|
+| ---- | ---- |
 | **海量图片存储** | 每家门店每天产生数千张货架照片，需弹性、低成本存储方案 |
 | **实时 AI 推理** | 要求推理延迟低（< 2s）、吞吐量高（并发多门店） |
 | **模型持续迭代** | 商品 SKU 频繁更新，模型需随业务快速迭代 |
@@ -75,9 +75,7 @@ Azure 云端 AI 推理管道
 
 ![智能视觉检测云端解决方案架构图](./assets/architecture-overview.svg)
 
-
-
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              Microsoft Azure                                    │
 │                                                                                 │
@@ -125,7 +123,7 @@ Azure 云端 AI 推理管道
 ### 3.2 数据流说明
 
 | 步骤 | 说明 |
-|------|------|
+| ---- | ---- |
 | **① 采集上传** | 巡检机器人通过 MQTT/HTTPS 连接 Azure IoT Hub，安全上传货架图片 |
 | **③ 对象存储** | 图片落地到 Azure Blob Storage `raw-images` 容器 |
 | **④ 事件触发** | Blob Created 事件通过 Azure Event Grid 实时推送到 Azure Functions |
@@ -245,7 +243,7 @@ az eventgrid event-subscription create \
 #### 两种方式对比
 
 | | Blob Trigger（直连） | Event Grid + HTTP Trigger |
-|---|---|---|
+| --- | --- | --- |
 | **触发机制** | Functions 定时轮询 Blob Storage | Blob Storage 主动推送事件 |
 | **触发延迟** | 最长 **10 分钟**（低频时） | **< 1 秒**（近实时） |
 | **代码复杂度** | ⭐ 简单，开箱即用 | ⭐⭐ 需处理 Event Grid 握手 |
@@ -277,24 +275,34 @@ az eventgrid event-subscription create \
   - Serverless 模式（PoC 阶段低成本）→ Provisioned（生产）
   - TTL：90天自动过期历史结果（可选）
 - **数据模型示例**：
+
   ```json
   {
-    "id": "img-20260406-001",
-    "storeId": "store-sh-001",
-    "robotId": "robot-001",
-    "capturedAt": "2026-04-06T10:30:00Z",
-    "imageUrl": "https://storage.../raw-images/img-001.jpg",
-    "detections": [
-      {
-        "productId": "sku-12345",
-        "productName": "Coca-Cola 330ml",
-        "confidence": 0.97,
-        "bbox": [120, 45, 280, 190],
-        "status": "in_stock"
-      }
-    ],
-    "complianceScore": 0.92,
+    "id": "7de3dd59-7fd9-4f78-acb7-49803e68bb78",
+    "storeId": "store-mvp-001",
+    "blobName": "raw-images/e2e-nestedjson-final-20260407-152338.png",
+    "timestamp": "2026-04-07T07:23:44.882525Z",
+    "result": {
+      "description": "货架图像分析完成（模拟结果）",
+      "compliance_score": 0.76,
+      "issues": [
+        "价签遮挡商品"
+      ],
+      "out_of_stock_positions": [
+        "第二层第3–4格"
+      ],
+      "objects": [
+        {
+          "name": "Coca-Cola 330ml",
+          "position": "第一层左侧",
+          "status": "in_stock"
+        }
+      ]
+    }
+  }
   ```
+
+> 当前 PoC 已将 AML 返回的字符串 JSON 在 Function 中反序列化后再写入 Cosmos DB，因此 `result` 是嵌套对象，便于后续直接查询和 BI 展开。
 
 ### 4.8 Azure API Management
 
@@ -313,7 +321,7 @@ az eventgrid event-subscription create \
 
 Azure Machine Learning (AML) 是微软的企业级 MLOps 平台，覆盖机器学习全生命周期：
 
-```
+```text
 数据准备 → 数据标注 → 模型训练 → 模型评估 → 模型注册 → 端点部署 → 监控 & 再训练
 ```
 
@@ -404,7 +412,7 @@ with mlflow.start_run():
 
 ### 5.3 MLOps 流水线
 
-```
+```text
 GitHub Push
      │
      ▼
@@ -428,7 +436,7 @@ GitHub Actions CI/CD
 
 #### 5.4.1 整体流程
 
-```
+```text
 自有模型文件 (.pt / .onnx / .pkl)
         ↓
    注册到 AML Model Registry
@@ -445,7 +453,7 @@ GitHub Actions CI/CD
 #### 5.4.2 常见模型文件格式说明
 
 | 格式 | 框架 | 适用场景 | 跨语言部署 |
-|------|------|----------|-----------|
+| ---- | ---- | -------- | --------- |
 | `.pt` | PyTorch 专用 | 训练/微调/云端推理 | ❌ |
 | `.onnx` | 跨框架通用（ONNX） | **边缘推理首选**，性能提升 20–50% | ✅ |
 | `.pkl` | Python Pickle | scikit-learn / XGBoost 等传统 ML | ❌ |
@@ -603,7 +611,7 @@ print(f"端点已就绪：{endpoint.scoring_uri}")
 **端点部署规格参考：**
 
 | 场景 | 推荐实例类型 | 说明 |
-|------|------------|------|
+| ---- | ---------- | ---- |
 | PoC / 测试 | `Standard_DS3_v2`（CPU） | 低成本验证推理逻辑 |
 | 轻量 GPU 推理 | `Standard_NC4as_T4_v3` | T4 GPU，性价比高 |
 | 生产高并发 | `Standard_NC6s_v3` | V100 GPU，适合多门店并发 |
@@ -646,7 +654,7 @@ def call_aml_endpoint(image_bytes: bytes) -> dict:
 上述所有步骤均可在 **AML Studio 图形界面**完成，无需写 SDK 代码：
 
 | 步骤 | GUI 路径 |
-|------|---------|
+| ---- | ------- |
 | 注册模型 | **Models → Register model → From local files**（上传 .pt/.onnx 文件） |
 | 创建环境 | **Environments → Create**（填写 conda.yml 或选基础镜像） |
 | 创建端点 | **Endpoints → Real-time endpoints → Create** |
@@ -799,6 +807,7 @@ import azure.functions as func
 import logging
 import json
 import requests
+from datetime import datetime
 from azure.identity import DefaultAzureCredential
 from azure.cosmos import CosmosClient
 
@@ -835,11 +844,15 @@ def process_shelf_image(blob: func.InputStream):
     container = cosmos_client \
         .get_database_client("ShelfVisionDB") \
         .get_container_client("DetectionResults")
+
+    normalized_result = json.loads(result) if isinstance(result, str) else result
+
     container.upsert_item({
         "id": blob.name,
-        "storeId": result.get("store_id", "unknown"),
-        "detections": result.get("detections", []),
-        "complianceScore": result.get("compliance_score", 0),
+      "storeId": "store-mvp-001",
+      "blobName": f"raw-images/{blob.name}",
+      "timestamp": datetime.utcnow().isoformat() + "Z",
+      "result": normalized_result,
     })
     logging.info("✅ Result stored to Cosmos DB")
 ```
@@ -862,7 +875,7 @@ def process_shelf_image(blob: func.InputStream):
 ### 7.1 身份与访问控制
 
 | 场景 | 推荐方案 |
-|------|----------|
+| ---- | -------- |
 | 边缘设备 → IoT Hub | X.509 证书认证（比 SAS Token 更安全） |
 | Function → AML Endpoint | Managed Identity（无需硬编码 API Key） |
 | Function → Cosmos DB | Managed Identity + RBAC（Cosmos DB Built-in Data Contributor 角色） |
@@ -903,7 +916,7 @@ az network private-endpoint create \
 > 以下为 **PoC 阶段**（1个门店，每天约 500 张图片）的估算，生产环境按实际规模调整。
 
 | 服务 | 规格 | 月费用估算（USD） |
-|------|------|------------------|
+| ---- | ---- | ---------------- |
 | Azure IoT Hub | S1 标准，50万消息/天 | ~$25 |
 | Azure Blob Storage | 热层 100 GB + 10万次操作 | ~$5 |
 | Azure Event Grid | 50万事件 | ~$0.5 |
@@ -920,7 +933,7 @@ az network private-endpoint create \
 ### 9.1 方案价值总结
 
 | 维度 | 价值 |
-|------|------|
+| ---- | ---- |
 | **弹性扩展** | Serverless + AML 自动伸缩，从 1 家到 10,000 家门店线性扩展 |
 | **全托管 MLOps** | 数据标注、训练、部署、监控一体化，降低 AI 运维门槛 |
 | **事件驱动** | 零轮询、近实时推理，减少不必要计算开销 |
@@ -930,7 +943,7 @@ az network private-endpoint create \
 ### 9.2 建议里程碑
 
 | 阶段 | 时间 | 目标 |
-|------|------|------|
+| ---- | ---- | ---- |
 | **PoC 搭建** | Week 1–2 | 基础设施部署，Azure AI Vision 快速验证 |
 | **数据采集与标注** | Week 3–5 | 采集 1,000+ 张货架图片，完成 BBox 标注 |
 | **首个定制模型上线** | Week 6–9 | YOLOv8 / AutoML 模型训练，mAP > 80% |
@@ -942,22 +955,22 @@ az network private-endpoint create \
 ## 10. 参考文档 References
 
 | 文档 | 链接 |
-|------|------|
-| Azure Architecture – Image Classification | https://learn.microsoft.com/azure/architecture/ai-ml/idea/intelligent-apps-image-processing |
-| Azure Architecture – Video CV with AML | https://learn.microsoft.com/azure/architecture/ai-ml/architecture/analyze-video-computer-vision-machine-learning |
-| Azure Machine Learning 文档 | https://learn.microsoft.com/azure/machine-learning/ |
-| AML AutoML for Images | https://learn.microsoft.com/azure/machine-learning/concept-automated-ml |
-| Azure AI Vision | https://learn.microsoft.com/azure/ai-services/computer-vision/overview |
-| Azure IoT Hub 开发者指南 | https://learn.microsoft.com/azure/iot-hub/iot-hub-devguide |
-| Azure Cosmos DB 最佳实践 | https://learn.microsoft.com/azure/cosmos-db/nosql/best-practice-dotnet |
-| Azure Functions Python 开发 | https://learn.microsoft.com/azure/azure-functions/functions-reference-python |
-| AML Managed Online Endpoint | https://learn.microsoft.com/azure/machine-learning/concept-endpoints-online |
+| ---- | ---- |
+| Azure Architecture – Image Classification | <https://learn.microsoft.com/azure/architecture/ai-ml/idea/intelligent-apps-image-processing> |
+| Azure Architecture – Video CV with AML | <https://learn.microsoft.com/azure/architecture/ai-ml/architecture/analyze-video-computer-vision-machine-learning> |
+| Azure Machine Learning 文档 | <https://learn.microsoft.com/azure/machine-learning/> |
+| AML AutoML for Images | <https://learn.microsoft.com/azure/machine-learning/concept-automated-ml> |
+| Azure AI Vision | <https://learn.microsoft.com/azure/ai-services/computer-vision/overview> |
+| Azure IoT Hub 开发者指南 | <https://learn.microsoft.com/azure/iot-hub/iot-hub-devguide> |
+| Azure Cosmos DB 最佳实践 | <https://learn.microsoft.com/azure/cosmos-db/nosql/best-practice-dotnet> |
+| Azure Functions Python 开发 | <https://learn.microsoft.com/azure/azure-functions/functions-reference-python> |
+| AML Managed Online Endpoint | <https://learn.microsoft.com/azure/machine-learning/concept-endpoints-online> |
 
 ---
 
 ## 文件清单 Repository Structure
 
-```
+```text
 Image_Recognation_Azure/
 ├── README.md                     ← 本文档（GitHub 说明文件）
 └── Image_Recognation_Azure.pptx  ← 方案介绍 PPT
@@ -965,4 +978,4 @@ Image_Recognation_Azure/
 
 ---
 
-*本文档由 GitHub Copilot 辅助生成 | Microsoft Azure | April 2026*
+本文档由 GitHub Copilot 辅助生成 | Microsoft Azure | April 2026

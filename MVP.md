@@ -549,6 +549,43 @@ func azure functionapp publish [shelf-mvp-fn-b1] --python
 
 或在 VS Code 中安装 **Azure Functions 扩展**，右键 → Deploy to Function App。
 
+### 4.4 当前线上实际部署方式
+
+本次 PoC 最终在线上采用的是“本地打包 + Zip Deploy 到 Azure Function”的方式，而不是直接在 Portal 里逐个粘贴代码。
+
+- Function App：*[shelf-mvp-fn-b1]*
+- 部署方式：`az functionapp deployment source config-zip --build-remote true`
+- 运行时：Linux + Python 3.11
+- 代码来源：本地 `shelf_func/` 目录打包后上传，Azure 侧远程构建
+- Blob Trigger：监听 *[raw-images]* 容器
+- Host Storage：`AzureWebJobsStorage` 使用 Managed Identity
+- Cosmos DB 写入：`CosmosClient(..., credential=ManagedIdentityCredential())`
+
+也就是说，仓库中的 `shelf_func/function_app.py` 是源码，线上 Function 是由这份源码打包部署出来的运行副本。
+
+### 4.5 当前线上验证结果
+
+截至 2026-04-07，线上关键资源与验证结果如下：
+
+- AML 推理：*[shelf-detection-endpoint]* / *[blue]* Deployment 处于可用状态
+- Function 健康检查：`/api/health` 返回 `OK - service is running`
+- Cosmos DB：已成功写入新的嵌套 JSON 结构结果文档
+- 最新验证样例 Blob：*[raw-images/e2e-nestedjson-final-20260407-152338.png]*
+
+对应的 Cosmos 文档已验证包含以下关键字段：
+
+- `id`
+- `storeId`
+- `blobName`
+- `timestamp`
+- `result.description`
+- `result.compliance_score`
+- `result.issues`
+- `result.out_of_stock_positions`
+- `result.objects`
+
+这说明当前线上链路已经完成了：Blob 上传 → Function 触发 → AML 返回结果 → Function 反序列化 → Cosmos 嵌套 JSON 入库。
+
 ---
 
 ## 5. 测试端到端流程
