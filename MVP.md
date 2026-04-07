@@ -432,15 +432,15 @@ func azure functionapp publish [shelf-mvp-fn-b1] --python
 
 ```mermaid
 flowchart TD
-    A[上传测试图片<br/>Azure Portal 或 upload_test.py] --> B[Blob Storage<br/><i>[raw-images]</i> 容器]
-    B --> C[Azure Functions<br/>Blob Trigger 被触发]
-    C --> D[AML Online Endpoint<br/>执行 Mock 或真实模型推理]
-    D --> E[Azure Cosmos DB<br/>写入 <i>[DetectionResults]</i>]
-    E --> F[结果验证<br/>Portal / query_results.py]
+    A["上传测试图片<br/>Azure Portal 或 upload_test.py"] --> B["Blob Storage<br/>raw-images 容器"]
+    B --> C["Azure Functions<br/>Blob Trigger 被触发"]
+    C --> D["AML Online Endpoint<br/>执行 Mock 或真实模型推理"]
+    D --> E["Azure Cosmos DB<br/>写入 DetectionResults"]
+    E --> F["结果验证<br/>Portal / query_results.py"]
 
-    C --> C1[查看 Function 日志<br/>确认是否触发成功]
-    D --> D1[确认无 HTTP 错误<br/>推理返回 JSON]
-    E --> E1[确认新增结果文档<br/>字段完整]
+    C --> C1["查看 Function 日志<br/>确认是否触发成功"]
+    D --> D1["确认无 HTTP 错误<br/>推理返回 JSON"]
+    E --> E1["确认新增结果文档<br/>字段完整"]
 ```
 
 可以把这张图理解为两条线：
