@@ -1,0 +1,37 @@
+# 发布排除：文档源文件/生成脚本/演示材料
+generate_ppt.py
+generate_drawio.py
+*.pptx
+*.pdf
+*.drawio
+
+# 发布排除：本地测试/临时访问脚本/打包产物
+enable_storage_test_access.cmd
+disable_storage_test_access.cmd
+testImage/
+*.zip
+~$*.pptx
+
+# 发布排除：本地依赖与环境文件
+.venv/
+.env
+.env.*
+local.settings.json
+shelf_func/.python_packages/
+
+# 发布排除：真实模型资产目录，仅保留说明文件
+mock_model/model_artifacts/*
+!mock_model/model_artifacts/README.md
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 编辑器临时文件
+.vscode/
+*.swp
+
+# Git 元数据辅助
+.gitkeep
+
