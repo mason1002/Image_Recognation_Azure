@@ -105,6 +105,10 @@ pip install azure-storage-blob azure-cosmos azure-ai-ml azure-identity
 - **资源组名称**：*[rg-aml-test]*
 - **工作区名称**：*[amltestworkspace]*
 
+官方参考链接：
+- Workspace 创建入口：<https://learn.microsoft.com/azure/machine-learning/quickstart-create-resources?view=azureml-api-2>
+- Workspace 管理说明：<https://learn.microsoft.com/azure/machine-learning/how-to-manage-workspace?view=azureml-api-2>
+
 #### 步骤二：准备模型目录（默认 Mock，可扩展到真实模型）
 
 在本地创建目录 `mock_model/`，建议包含以下文件：
@@ -298,6 +302,10 @@ python deploy_to_aml.py
 > - `deploy_to_aml.py` 会在本地调用 `azure.ai.ml` SDK
 > - 脚本里明确执行了注册 Model、注册 Environment、创建 Endpoint、创建 Deployment、切流量等动作
 > - 也就是说，文档当前默认读者是在本地终端运行部署，而不是在 Portal 里一步一步点出来
+
+官方参考链接：
+- Online Endpoint 部署说明：<https://learn.microsoft.com/azure/machine-learning/how-to-deploy-online-endpoints?view=azureml-api-2>
+- Deploy a model as an online endpoint：<https://learn.microsoft.com/en-us/azure/machine-learning/tutorial-deploy-model?view=azureml-api-2>
 
 记录输出的：
 - **端点 URL**：*[https://[shelf-detection-endpoint].[westus2].inference.ml.azure.com/score]*
